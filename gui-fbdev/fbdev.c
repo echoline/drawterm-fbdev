@@ -517,11 +517,13 @@ onevent(struct input_event *data)
 		default:
 			if (hidden)
 				return 0;
-			if (data->code > 0 && data->code < 84) {
+			if (data->code > 0 && data->code <= nelem(code2key)) {
 				if (shift_state & (1 << KG_SHIFT))
 					key = code2key_shift[data->code-1];
 				else
 					key = code2key[data->code-1];
+				if (key == Kshift)
+					return 0;
 				kbdkey(key, data->value);
 				return 0;
 			}
