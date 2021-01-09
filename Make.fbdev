@@ -9,11 +9,11 @@ CFLAGS=-Wall -Wno-missing-braces -ggdb -I$(ROOT) -I$(ROOT)/include -I$(ROOT)/ker
 O=o
 OS=posix
 GUI=fbdev
-LDADD=-ggdb -lm
+LDADD=-ggdb -lm -lasound
 LDFLAGS=$(PTHREAD)
 TARG=drawterm
 # AUDIO=none
-AUDIO=unix
+AUDIO=alsa
 
 all: default
 
