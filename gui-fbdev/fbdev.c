@@ -31,6 +31,8 @@ int		ttyfd;
 char*		tty;
 char		hidden;
 int		devicesfd;
+ulong		chan;
+int		depth;
 
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -79,10 +81,10 @@ _fbput(Memimage *m, Rectangle r) {
 	int y;
 
 	for (y = r.min.y; y < r.max.y; y++){
-		long loc = y * finfo.line_length + r.min.x * 2;
-		void *ptr = m->data->bdata + y * m->width * 4 + r.min.x * 2;
+		long loc = y * finfo.line_length + r.min.x * depth;
+		void *ptr = m->data->bdata + y * m->width * 4 + r.min.x * depth;
 
-		memcpy(fbp + loc, ptr, Dx(r) * 2);
+		memcpy(fbp + loc, ptr, Dx(r) * depth);
 	}
 }
 
@@ -104,6 +106,19 @@ fbattach(int fbdevidx)
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &(vinfo)) < 0)
 		goto err;
 
+	switch (vinfo.bits_per_pixel) {
+	case 32:
+		chan = XRGB32;
+		depth = 4;
+		break;
+	case 16:
+		chan = RGB16;
+		depth = 2;
+		break;
+	default:
+		goto err;
+	}
+
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &(finfo)) < 0)
 		goto err;
 
@@ -117,8 +132,8 @@ fbattach(int fbdevidx)
 
 	screenr = r;
 
-	screenimage = allocmemimage(r, RGB16);
-	backbuf = allocmemimage(r, RGB16);
+	screenimage = allocmemimage(r, chan);
+	backbuf = allocmemimage(r, chan);
 	return backbuf;
 
 err:
@@ -199,14 +214,28 @@ flushmemscreen(Rectangle r)
 				break;
 
 			i = y * 2 + x / 8;
-			fbloc = ((p.y+y2) * screenimage->r.max.x + (p.x+x2)) * 2;
+			fbloc = ((p.y+y2) * screenimage->r.max.x + (p.x+x2)) * depth;
 
 			if (cursor.clr[i] & (128 >> (x % 8))) {
-				*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0xFFFF;
+				switch (depth) {
+				case 2:
+					*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0xFFFF;
+					break;
+				case 4:
+					*((uint32_t*)(screenimage->data->bdata + fbloc)) = 0xFFFFFFFF;
+					break;
+				}
 			}
 
 			if (cursor.set[i] & (128 >> (x % 8))) {
-				*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0x0000;
+				switch (depth) {
+				case 2:
+					*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0x0000;
+					break;
+				case 4:
+					*((uint32_t*)(screenimage->data->bdata + fbloc)) = 0xFF000000;
+					break;
+				}
 			}
 		}
 	}
@@ -354,7 +383,7 @@ screeninit(void)
 		panic("cannot open event files: %r");
 	}
 
-	screensize(screenr, RGB16);
+	screensize(screenr, chan);
 	if (gscreen == nil)
 		panic("screensize failed");
 
