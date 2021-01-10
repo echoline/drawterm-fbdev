@@ -170,11 +170,12 @@ flushmemscreen(Rectangle r)
 	long fbloc;
 	int x2, y2;
 
-	assert(!canqlock(&drawlock));
 	if (rectclip(&r, screenimage->r) == 0)
 		return;
 	if (Dx(r) == 0 || Dy(r) == 0)
 		return;
+
+	assert(!canqlock(&drawlock));
 
 	memimagedraw(screenimage, r, backbuf, r.min, nil, r.min, S);
 
@@ -225,6 +226,7 @@ fbproc(void *v)
 	char buf[32];
 	struct pollfd *pfd;
 	int r;
+	int ioctlarg;
 
 	pfd = calloc(3, sizeof(struct pollfd));
 	pfd[0].fd = ttyfd; // for virtual console switches
@@ -289,7 +291,19 @@ TOP:
 			if (pfd[r+3].revents & POLLIN) {
 				if (read(pfd[r+3].fd, &data, sizeof(data)) != sizeof(data))
 					panic("eventfd read: %r");
-				onevent(&data);
+				if (onevent(&data) == 0) {
+					ioctlarg = 15;
+					if (ioctl(0, TIOCLINUX, &ioctlarg) != 0) {
+						ioctlarg = 4;
+						ioctl(0, TIOCLINUX, &ioctlarg);
+						usleep(100000);
+						qlock(&drawlock);
+						flushmemscreen(gscreen->clipr);
+						qunlock(&drawlock);
+					} else {
+						write(1, "\033[9;30]", 7);
+					}
+				}
 			}
 	}
 
@@ -443,7 +457,7 @@ onevent(struct input_event *data)
 	int key;
 
 	if (hidden != 0)
-		return 0;
+		return -1;
 
 	msec = ticks();
 
@@ -521,7 +535,7 @@ onevent(struct input_event *data)
 				else
 					key = code2key[data->code-1];
 				if (key == Kshift)
-					return 0;
+					return -1;
 				kbdkey(key, data->value);
 				return 0;
 			}
