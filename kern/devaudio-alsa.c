@@ -17,17 +17,13 @@ enum
 };
 
 static snd_pcm_t *handle;
-static char *device = nil;
 static int speed = Rate;
 
 /* maybe this should return -1 instead of sysfatal */
 void
 audiodevopen(void)
 {
-	if(device == nil)
-		device = strdup("default");
-
-	if(snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0) < 0)
+	if(snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
 		error("snd_pcm_open failed");
 
 	if(snd_pcm_set_params(handle, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, speed, 1, 500000) < 0)
