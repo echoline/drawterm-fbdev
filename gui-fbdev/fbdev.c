@@ -428,8 +428,6 @@ termctl(uint32_t o, int or)
 
 void
 ctrlc(int sig) {
-	kbdkey(3, 1);
-	kbdkey(3, 0);
 }
 
 int
