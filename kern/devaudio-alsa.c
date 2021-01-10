@@ -68,7 +68,7 @@ audiodevwrite(void *v, int n)
 
 	frames = snd_pcm_writei(handle, v, n/4);
 	if (frames < 0)
-		snd_pcm_recover(handle, frames, 0);
+		frames = snd_pcm_recover(handle, frames, 0);
 	if (frames < 0)
 		error("snd_pcm_writei");
 
