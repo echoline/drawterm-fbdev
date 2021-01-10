@@ -79,10 +79,10 @@ _fbput(Memimage *m, Rectangle r) {
 	int y;
 
 	for (y = r.min.y; y < r.max.y; y++){
-		long loc = y * finfo.line_length + r.min.x * 4;
-		void *ptr = m->data->bdata + (y * m->width + r.min.x) * 4;
+		long loc = y * finfo.line_length + r.min.x * 2;
+		void *ptr = m->data->bdata + y * m->width * 4 + r.min.x * 2;
 
-		memcpy(fbp + loc, ptr, Dx(r) * 4);
+		memcpy(fbp + loc, ptr, Dx(r) * 2);
 	}
 }
 
@@ -104,11 +104,6 @@ fbattach(int fbdevidx)
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &(vinfo)) < 0)
 		goto err;
 
-	vinfo.grayscale = 0;
-	vinfo.bits_per_pixel = 32;
-	if (ioctl(fd, FBIOPUT_VSCREENINFO, &(vinfo)) < 0)
-		goto err;
-
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &(finfo)) < 0)
 		goto err;
 
@@ -122,8 +117,8 @@ fbattach(int fbdevidx)
 
 	screenr = r;
 
-	screenimage = allocmemimage(r, XRGB32);
-	backbuf = allocmemimage(r, XRGB32);
+	screenimage = allocmemimage(r, RGB16);
+	backbuf = allocmemimage(r, RGB16);
 	return backbuf;
 
 err:
@@ -204,14 +199,14 @@ flushmemscreen(Rectangle r)
 				break;
 
 			i = y * 2 + x / 8;
-			fbloc = ((p.y+y2) * screenimage->r.max.x + (p.x+x2)) * 4;
+			fbloc = ((p.y+y2) * screenimage->r.max.x + (p.x+x2)) * 2;
 
 			if (cursor.clr[i] & (128 >> (x % 8))) {
-				*((uint32_t*)(screenimage->data->bdata + fbloc)) = 0xFFFFFFFF;
+				*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0xFFFF;
 			}
 
 			if (cursor.set[i] & (128 >> (x % 8))) {
-				*((uint32_t*)(screenimage->data->bdata + fbloc)) = 0xFF000000;
+				*((uint16_t*)(screenimage->data->bdata + fbloc)) = 0x0000;
 			}
 		}
 	}
@@ -359,7 +354,7 @@ screeninit(void)
 		panic("cannot open event files: %r");
 	}
 
-	screensize(screenr, XRGB32);
+	screensize(screenr, RGB16);
 	if (gscreen == nil)
 		panic("screensize failed");
 
