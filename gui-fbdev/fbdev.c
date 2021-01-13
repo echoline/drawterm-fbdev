@@ -479,6 +479,7 @@ onevent(struct input_event *data)
 	static Point startmousept;
 	static Point startpt;
 	int key;
+	static ulong lastmsec = 0;
 
 	if (hidden != 0)
 		return -1;
@@ -635,11 +636,17 @@ onevent(struct input_event *data)
 	combinerect(&new, old);
 	new.min = subpt(new.min, Pt(16, 16)); // to encompass any cursor->offset
 
-	absmousetrack(mousexy.x, mousexy.y, buttons, msec);
-
 	qlock(&drawlock);
 	flushmemscreen(new);
 	qunlock(&drawlock);
+
+	if ((msec - lastmsec) < 10)
+		if (data->type != 1)
+			return 0;
+
+	lastmsec = msec;
+
+	absmousetrack(mousexy.x, mousexy.y, buttons, msec);
 
 	return 0;
 }
