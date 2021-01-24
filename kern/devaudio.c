@@ -14,6 +14,7 @@ enum
 	Aclosed		= 0,
 	Aread,
 	Awrite,
+	Ardwr,
 
 	Speed		= 44100,
 	Ncmd		= 50,		/* max volume command words */
@@ -31,7 +32,7 @@ static	struct
 {
 	QLock	lk;
 	Rendez	vous;
-	int	amode;		/* Aclosed/Aread/Awrite for /audio */
+	int	amode;		/* Aclosed/Aread/Awrite/Ardwr for /audio */
 } audio;
 
 #define aqlock(a) qlock(&(a)->lk)
@@ -112,6 +113,8 @@ audioopen(Chan *c, int omode)
 		amode = Awrite;
 		if((omode&7) == OREAD)
 			amode = Aread;
+		else if((omode&7) == ORDWR)
+			amode = Ardwr;
 		aqlock(&audio);
 		if(waserror()){
 			aqunlock(&audio);
@@ -176,7 +179,7 @@ audioread(Chan *c, void *v, long n, vlong off)
 		return devdirread(c, a, n, audiodir, nelem(audiodir), devgen);
 
 	case Qaudio:
-		if(audio.amode != Aread)
+		if(audio.amode != Aread && audio.amode != Ardwr)
 			error(Emode);
 		aqlock(&audio);
 		if(waserror()){
@@ -318,7 +321,7 @@ audiowrite(Chan *c, void *vp, long n, vlong off)
 		break;
 
 	case Qaudio:
-		if(audio.amode != Awrite)
+		if(audio.amode != Awrite && audio.amode != Ardwr)
 			error(Emode);
 		aqlock(&audio);
 		if(waserror()){

@@ -16,25 +16,34 @@ enum
 	Bits = 16,
 };
 
-static snd_pcm_t *handle;
+static snd_pcm_t *playback;
+static snd_pcm_t *capture;
 static int speed = Rate;
 
 /* maybe this should return -1 instead of sysfatal */
 void
 audiodevopen(void)
 {
-	if(snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
+	if(snd_pcm_open(&playback, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
 		error("snd_pcm_open failed");
 
-	if(snd_pcm_set_params(handle, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, speed, 1, 500000) < 0)
+	if(snd_pcm_set_params(playback, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, speed, 1, 500000) < 0)
+		error("snd_pcm_set_params");
+
+	if(snd_pcm_open(&capture, "default", SND_PCM_STREAM_CAPTURE, 0) < 0)
+		error("snd_pcm_open failed");
+
+	if(snd_pcm_set_params(capture, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 2, speed, 1, 500000) < 0)
 		error("snd_pcm_set_params");
 }
 
 void
 audiodevclose(void)
 {
-	snd_pcm_drain(handle);
-	snd_pcm_close(handle);
+	snd_pcm_drain(playback);
+	snd_pcm_close(playback);
+
+	snd_pcm_close(capture);
 }
 
 void
@@ -65,10 +74,10 @@ audiodevwrite(void *v, int n)
 
 	for(tot = 0; tot < n; tot += m){
 		do {
-			frames = snd_pcm_writei(handle, v+tot, (n-tot)/4);
+			frames = snd_pcm_writei(playback, v+tot, (n-tot)/4);
 		} while(frames == -EAGAIN);
 		if (frames < 0)
-			frames = snd_pcm_recover(handle, frames, 0);
+			frames = snd_pcm_recover(playback, frames, 0);
 		if (frames < 0)
 			error("snd_pcm_writei");
 		m = frames*4;
@@ -80,6 +89,13 @@ audiodevwrite(void *v, int n)
 int
 audiodevread(void *v, int n)
 {
-	error("no reading");
-	return -1;
+	snd_pcm_sframes_t frames;
+
+	do {
+		frames = snd_pcm_readi(capture, v, n/4);
+	} while(frames == -EAGAIN);
+	if (frames < 0)
+		error("snd_pcm_readi");
+
+	return frames*4;
 }
