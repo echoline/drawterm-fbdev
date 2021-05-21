@@ -194,8 +194,8 @@ void
 screeninit(void)
 {
 	int i, n, x, y;
-	char *argv[2];
 	Window rootwin;
+	char *argv[2];
 	Rectangle r;
 	XWMHints hints;
 	XScreen *screen;
@@ -1244,6 +1244,12 @@ clipwrite(char *buf)
 {
 	_xputsnarf(xsnarfcon, buf);
 	return 0;
+}
+
+void
+titlewrite(char *buf)
+{
+	XStoreName(xdisplay, xdrawable, buf);
 }
 
 void

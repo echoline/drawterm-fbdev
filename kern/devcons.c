@@ -346,6 +346,7 @@ enum{
 	Qsysstat,
 	Qtime,
 	Qzero,
+	Qlabel,
 };
 
 enum
@@ -373,6 +374,7 @@ static Dirtab consdir[]={
 	"sysstat",	{Qsysstat},	0,		0666,
 	"time",		{Qtime},	NUMSIZE+3*VLNUMSIZE,	0664,
 	"zero",		{Qzero},	0,		0444,
+	"label",	{Qlabel},	0,		0666,
 };
 
 Dirtab *snarftab = &consdir[Qsnarf];
@@ -467,6 +469,10 @@ consopen(Chan *c, int omode)
 		else
 			c->aux = mallocz(SnarfSize, 1);
 		break;
+
+	case Qlabel:
+		c->aux = mallocz(SnarfSize, 1);
+		break;
 	}
 	return c;
 }
@@ -498,6 +504,12 @@ consclose(Chan *c)
 	case Qsnarf:
 		if(c->mode == OWRITE)
 			clipwrite(c->aux);
+		free(c->aux);
+		break;
+
+	case Qlabel:
+		if(c->mode == OWRITE)
+			titlewrite(c->aux);
 		free(c->aux);
 		break;
 	}
@@ -610,6 +622,9 @@ consread(Chan *c, void *buf, long n, vlong off)
 		return readstr((ulong)offset, buf, n, hostdomain);
 
 	case Qnull:
+		return 0;
+
+	case Qlabel:
 		return 0;
 
 	case Qsnarf:
@@ -764,6 +779,7 @@ conswrite(Chan *c, void *va, long n, vlong off)
 		return showfilewrite(a, n);
 
 	case Qsnarf:
+	case Qlabel:
 		if(offset >= SnarfSize || offset+n >= SnarfSize)
 			error(Etoobig);
 		snarftab->qid.vers++;

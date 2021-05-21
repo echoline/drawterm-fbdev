@@ -19,6 +19,7 @@ Chan*		cclone(Chan*);
 void		cclose(Chan*);
 char*	clipread(void);
 int		clipwrite(char*);
+void		titlewrite(char*);
 void		closeegrp(Egrp*);
 void		closefgrp(Fgrp*);
 void		closemount(Mount*);
