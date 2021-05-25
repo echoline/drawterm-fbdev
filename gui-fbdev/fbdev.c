@@ -285,7 +285,6 @@ TOP:
 			buf[r] = '\0';
 			if (strcmp(buf, tty) == 0) {
 				hidden = 0;
-				usleep(100000);
 				printf("\e[?25l");
 				fflush(stdout);
 				qlock(&drawlock);
@@ -320,7 +319,6 @@ TOP:
 					if (ioctl(0, TIOCLINUX, &ioctlarg) != 0) {
 						ioctlarg = 4;
 						ioctl(0, TIOCLINUX, &ioctlarg);
-						usleep(100000);
 						qlock(&drawlock);
 						flushmemscreen(gscreen->clipr);
 						qunlock(&drawlock);
@@ -666,5 +664,10 @@ setcursor(void)
 	qlock(&drawlock);
 	flushmemscreen(screenr);
 	qunlock(&drawlock);
+}
+
+void
+titlewrite(char* buf)
+{
 }
 
